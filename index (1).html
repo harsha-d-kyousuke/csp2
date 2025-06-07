@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Farm Planner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .slide {
+            transform: translateX(100%);
+            transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+        .slide.active {
+            transform: translateX(0);
+        }
+        .slide.prev {
+            transform: translateX(-100%);
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .soil-card {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .crop-card {
+            background: linear-gradient(145deg, #f0f9ff, #e0f2fe);
+            border-left: 4px solid #0ea5e9;
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.8s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .pulse-grow {
+            animation: pulseGrow 2s infinite;
+        }
+        @keyframes pulseGrow {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        #map {
+            height: 300px;
+            border-radius: 12px;
+        }
+        .dark .soil-card {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .dark .crop-card {
+            background: linear-gradient(145deg, #1e293b, #334155);
+            border-left: 4px solid #06b6d4;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <!-- Dark Mode Toggle -->
+    <button id="darkModeToggle" class="fixed top-4 right-4 z-50 p-3 bg-white dark:bg-gray-800 rounded-full shadow-lg hover:shadow-xl transition-all duration-300">
+        <i class="fas fa-moon dark:hidden text-gray-600"></i>
+        <i class="fas fa-sun hidden dark:block text-yellow-400"></i>
+    </button>
+
+    <div class="relative w-full h-screen overflow-hidden">
+        <!-- Slide 1: Landing -->
+        <div id="slide1" class="slide active absolute inset-0 flex items-center justify-center gradient-bg">
+            <div class="text-center text-white px-6 animate-fade-in">
+                <div class="mb-8">
+                    <i class="fas fa-seedling text-6xl mb-4 pulse-grow"></i>
+                    <h1 class="text-5xl md:text-7xl font-bold mb-4">Smart Farm Planner</h1>
+                    <p class="text-xl md:text-2xl mb-8 opacity-90">Intelligent Soil Analysis & Crop Rotation Planning</p>
+                </div>
+                <button onclick="nextSlide()" class="bg-white text-purple-600 px-8 py-4 rounded-full text-lg font-semibold hover:bg-gray-100 transform hover:scale-105 transition-all duration-300 shadow-2xl">
+                    <i class="fas fa-rocket mr-2"></i>Start Planning
+                </button>
+            </div>
+        </div>
+
+        <!-- Slide 2: Input Form -->
+        <div id="slide2" class="slide absolute inset-0 flex items-center justify-center bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4 animate-fade-in">
+                <h2 class="text-3xl font-bold text-gray-800 dark:text-white mb-6 text-center">
+                    <i class="fas fa-map-marker-alt text-green-500 mr-2"></i>Land Details
+                </h2>
+                <form id="landForm" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            <i class="fas fa-location-dot mr-2"></i>Location
+                        </label>
+                        <div class="flex space-x-2">
+                            <input type="text" id="location" class="flex-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="Enter city or coordinates">
+                            <button type="button" onclick="getLocation()" class="px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                                <i class="fas fa-crosshairs"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            <i class="fas fa-expand-arrows-alt mr-2"></i>Land Area
+                        </label>
+                        <div class="flex space-x-2">
+                            <input type="number" id="landArea" class="flex-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="Enter area">
+                            <select id="areaUnit" class="p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                                <option value="acres">Acres</option>
+                                <option value="hectares">Hectares</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            <i class="fas fa-wheat-awn mr-2"></i>Current Crop
+                        </label>
+                        <select id="currentCrop" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                            <option value="">Select current crop</option>
+                            <option value="wheat">Wheat</option>
+                            <option value="corn">Corn</option>
+                            <option value="rice">Rice</option>
+                            <option value="soybeans">Soybeans</option>
+                            <option value="cotton">Cotton</option>
+                            <option value="barley">Barley</option>
+                            <option value="none">No current crop</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-gradient-to-r from-green-500 to-blue-500 text-white py-3 rounded-lg font-semibold hover:from-green-600 hover:to-blue-600 transform hover:scale-105 transition-all duration-300">
+                        <i class="fas fa-microscope mr-2"></i>Analyze Soil
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Slide 3: Soil Analysis -->
+        <div id="slide3" class="slide absolute inset-0 p-6 bg-gradient-to-br from-amber-50 via-orange-50 to-red-50 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 overflow-y-auto">
+            <div class="max-w-6xl mx-auto">
+                <h2 class="text-4xl font-bold text-gray-800 dark:text-white mb-8 text-center animate-fade-in">
+                    <i class="fas fa-flask text-amber-500 mr-3"></i>Soil Analysis Report
+                </h2>
+                
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div class="space-y-6">
+                        <div id="soilCards" class="space-y-4">
+                            <!-- Soil cards will be populated here -->
+                        </div>
+                        
+                        <button onclick="nextSlide()" class="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transform hover:scale-105 transition-all duration-300">
+                            <i class="fas fa-seedling mr-2"></i>Suggest Crops
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <h3 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">
+                            <i class="fas fa-map mr-2"></i>Location Map
+                        </h3>
+                        <div id="map" class="shadow-xl"></div>
+                        <div id="locationInfo" class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-lg">
+                            <p class="text-gray-600 dark:text-gray-300">Location details will appear here</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: Crop Suggestions -->
+        <div id="slide4" class="slide absolute inset-0 p-6 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 overflow-y-auto">
+            <div class="max-w-6xl mx-auto">
+                <h2 class="text-4xl font-bold text-gray-800 dark:text-white mb-8 text-center animate-fade-in">
+                    <i class="fas fa-magic text-green-500 mr-3"></i>Smart Crop Rotation Suggestions
+                </h2>
+                
+                <div id="cropSuggestions" class="grid md:grid-cols-3 gap-6 mb-8">
+                    <!-- Crop suggestions will be populated here -->
+                </div>
+                
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button onclick="exportReport()" class="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-8 py-4 rounded-xl font-semibold hover:from-blue-600 hover:to-cyan-600 transform hover:scale-105 transition-all duration-300">
+                        <i class="fas fa-download mr-2"></i>Export Report
+                    </button>
+                    <button onclick="startOver()" class="bg-gradient-to-r from-gray-500 to-gray-600 text-white px-8 py-4 rounded-xl font-semibold hover:from-gray-600 hover:to-gray-700 transform hover:scale-105 transition-all duration-300">
+                        <i class="fas fa-refresh mr-2"></i>Start Over
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+async function geocodeLocationName(locationName) {
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}`;
+            const response = await fetch(url);
+            const data = await response.json();
+            if (data.length > 0) {
+                return {
+                    lat: parseFloat(data[0].lat),
+                    lng: parseFloat(data[0].lon)
+                };
+            } else {
+                alert("Location not found. Showing default location.");
+                return { lat: 28.6139, lng: 77.2090 };
+            }
+        }
+
+let currentSlide = 1;
+        let landData = {};
+        let soilData = {};
+        let map;
+
+        // Dark mode toggle
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const html = document.documentElement;
+
+        darkModeToggle.addEventListener('click', () => {
+            html.classList.toggle('dark');
+            localStorage.setItem('darkMode', html.classList.contains('dark'));
+        });
+
+        // Check for saved dark mode preference
+        if (localStorage.getItem('darkMode') === 'true') {
+            html.classList.add('dark');
+        }
+
+        function nextSlide() {
+            const current = document.getElementById(`slide${currentSlide}`);
+            const next = document.getElementById(`slide${currentSlide + 1}`);
+            
+            if (next) {
+                current.classList.remove('active');
+                current.classList.add('prev');
+                next.classList.remove('slide');
+                next.classList.add('active');
+                currentSlide++;
+                
+                // Initialize slide-specific functionality
+                if (currentSlide === 3) {
+                    initializeSoilAnalysis();
+                } else if (currentSlide === 4) {
+                    generateCropSuggestions();
+                }
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 1) {
+                const current = document.getElementById(`slide${currentSlide}`);
+                const prev = document.getElementById(`slide${currentSlide - 1}`);
+                
+                current.classList.remove('active');
+                current.classList.add('slide');
+                prev.classList.remove('prev');
+                prev.classList.add('active');
+                currentSlide--;
+            }
+        }
+
+        // Form submission
+        document.getElementById('landForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            landData = {
+                location: document.getElementById('location').value,
+                landArea: document.getElementById('landArea').value,
+                areaUnit: document.getElementById('areaUnit').value,
+                currentCrop: document.getElementById('currentCrop').value
+            };
+            
+            // Validate form
+            if (!landData.location || !landData.landArea) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            nextSlide();
+        });
+
+        // Get user location
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    document.getElementById('location').value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                }, function(error) {
+                    alert('Unable to get location. Please enter manually.');
+                });
+            } else {
+                alert('Geolocation is not supported by this browser.');
+            }
+        }
+
+        // Initialize soil analysis
+        function initializeSoilAnalysis() {
+            // Simulate soil analysis based on location
+            const soilTypes = ['Loamy', 'Clay', 'Sandy', 'Silty', 'Peaty'];
+            const textures = ['Fine', 'Medium', 'Coarse'];
+            
+            soilData = {
+                ph: (Math.random() * 3 + 5.5).toFixed(1),
+                texture: textures[Math.floor(Math.random() * textures.length)],
+                type: soilTypes[Math.floor(Math.random() * soilTypes.length)],
+                organicMatter: (Math.random() * 5 + 2).toFixed(1),
+                nitrogen: Math.floor(Math.random() * 50 + 20),
+                phosphorus: Math.floor(Math.random() * 30 + 10),
+                potassium: Math.floor(Math.random() * 200 + 100)
+            };
+
+            displaySoilCards();
+
+            // Fix: Delay map initialization so DOM is ready and visible
+            setTimeout(() => {
+                initializeMap();
+            }, 600);
+        }
+
+        function displaySoilCards() {
+            const container = document.getElementById('soilCards');
+            container.innerHTML = `
+                <div class="soil-card p-6 rounded-xl text-white animate-fade-in">
+                    <div class="flex items-center mb-3">
+                        <i class="fas fa-vial text-2xl mr-3"></i>
+                        <h3 class="text-xl font-semibold">pH Level</h3>
+                    </div>
+                    <p class="text-3xl font-bold">${soilData.ph}</p>
+                    <p class="text-sm opacity-80">${soilData.ph < 6.5 ? 'Acidic' : soilData.ph > 7.5 ? 'Alkaline' : 'Neutral'}</p>
+                </div>
+                
+                <div class="soil-card p-6 rounded-xl text-white animate-fade-in" style="animation-delay: 0.2s">
+                    <div class="flex items-center mb-3">
+                        <i class="fas fa-mountain text-2xl mr-3"></i>
+                        <h3 class="text-xl font-semibold">Soil Type</h3>
+                    </div>
+                    <p class="text-2xl font-bold">${soilData.type}</p>
+                    <p class="text-sm opacity-80">Texture: ${soilData.texture}</p>
+                </div>
+                
+                <div class="soil-card p-6 rounded-xl text-white animate-fade-in" style="animation-delay: 0.4s">
+                    <div class="flex items-center mb-3">
+                        <i class="fas fa-leaf text-2xl mr-3"></i>
+                        <h3 class="text-xl font-semibold">Nutrients</h3>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span>Nitrogen:</span>
+                            <span class="font-bold">${soilData.nitrogen} ppm</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Phosphorus:</span>
+                            <span class="font-bold">${soilData.phosphorus} ppm</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Potassium:</span>
+                            <span class="font-bold">${soilData.potassium} ppm</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function initializeMap() {
+            if (map) {
+                map.remove();
+            }
+
+            let lat = 28.6139, lng = 77.2090;
+
+            if (landData.location.includes(',')) {
+                const coords = landData.location.split(',');
+                lat = parseFloat(coords[0]);
+                lng = parseFloat(coords[1]);
+            } else {
+                const geo = await geocodeLocationName(landData.location);
+                lat = geo.lat;
+                lng = geo.lng;
+            }
+
+            map = L.map('map').setView([lat, lng], 12);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            L.marker([lat, lng]).addTo(map)
+                .bindPopup(`<b>Your Farm Location</b><br>Area: ${landData.landArea} ${landData.areaUnit}`)
+                .openPopup();
+
+            document.getElementById('locationInfo').innerHTML = `
+                <h4 class="font-semibold text-gray-800 dark:text-white mb-2">Location Details</h4>
+                <p class="text-gray-600 dark:text-gray-300">📍 Coordinates: ${lat.toFixed(4)}, ${lng.toFixed(4)}</p>
+                <p class="text-gray-600 dark:text-gray-300">📏 Area: ${landData.landArea} ${landData.areaUnit}</p>
+                <p class="text-gray-600 dark:text-gray-300">🌾 Current Crop: ${landData.currentCrop || 'None'}</p>
+            `;
+        }
+
+        function generateCropSuggestions() {
+            const crops = [
+                {
+                    name: 'Tomatoes',
+                    icon: '🍅',
+                    waterNeeds: '25-30',
+                    fertilizer: 'NPK 10-10-10',
+                    climate: '20-25°C',
+                    season: 'Spring/Summer',
+                    benefits: ['High market value', 'Quick harvest', 'Disease resistant varieties available']
+                },
+                {
+                    name: 'Soybeans',
+                    icon: '🫘',
+                    waterNeeds: '18-22',
+                    fertilizer: 'Low nitrogen (fixes own)',
+                    climate: '22-30°C',
+                    season: 'Monsoon',
+                    benefits: ['Nitrogen fixation', 'Improves soil fertility', 'High protein content']
+                },
+                {
+                    name: 'Wheat',
+                    icon: '🌾',
+                    waterNeeds: '12-15',
+                    fertilizer: 'Urea + DAP',
+                    climate: '15-22°C',
+                    season: 'Winter',
+                    benefits: ['Staple crop', 'Good storage life', 'Steady market demand']
+                }
+            ];
+
+            const container = document.getElementById('cropSuggestions');
+            container.innerHTML = crops.map((crop, index) => `
+                <div class="crop-card p-6 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-300 animate-fade-in" style="animation-delay: ${index * 0.2}s">
+                    <div class="text-center mb-4">
+                        <div class="text-4xl mb-2">${crop.icon}</div>
+                        <h3 class="text-xl font-bold text-gray-800 dark:text-white">${crop.name}</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-300">${crop.season}</p>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <div class="flex items-center text-sm">
+                            <i class="fas fa-tint text-blue-500 w-5"></i>
+                            <span class="text-gray-700 dark:text-gray-300 ml-2">${crop.waterNeeds} L/day per plant</span>
+                        </div>
+                        
+                        <div class="flex items-center text-sm">
+                            <i class="fas fa-seedling text-green-500 w-5"></i>
+                            <span class="text-gray-700 dark:text-gray-300 ml-2">${crop.fertilizer}</span>
+                        </div>
+                        
+                        <div class="flex items-center text-sm">
+                            <i class="fas fa-thermometer-half text-orange-500 w-5"></i>
+                            <span class="text-gray-700 dark:text-gray-300 ml-2">${crop.climate}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                        <h4 class="font-semibold text-gray-800 dark:text-white mb-2">Benefits:</h4>
+                        <ul class="text-xs text-gray-600 dark:text-gray-300 space-y-1">
+                            ${crop.benefits.map(benefit => `<li>• ${benefit}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function exportReport() {
+            const reportData = {
+                landDetails: landData,
+                soilAnalysis: soilData,
+                timestamp: new Date().toISOString()
+            };
+            
+            const reportText = `
+SMART FARM PLANNER - SOIL ANALYSIS REPORT
+Generated: ${new Date().toLocaleDateString()}
+
+LAND DETAILS:
+Location: ${landData.location}
+Area: ${landData.landArea} ${landData.areaUnit}
+Current Crop: ${landData.currentCrop || 'None'}
+
+SOIL ANALYSIS:
+pH Level: ${soilData.ph}
+Soil Type: ${soilData.type}
+Texture: ${soilData.texture}
+Organic Matter: ${soilData.organicMatter}%
+Nitrogen: ${soilData.nitrogen} ppm
+Phosphorus: ${soilData.phosphorus} ppm
+Potassium: ${soilData.potassium} ppm
+
+CROP RECOMMENDATIONS:
+1. Tomatoes - High value crop suitable for your soil conditions
+2. Soybeans - Nitrogen-fixing crop to improve soil fertility
+3. Wheat - Reliable staple crop with steady market demand
+
+This report is generated by Smart Farm Planner AI system.
+            `;
+            
+            const blob = new Blob([reportText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `farm-analysis-report-${Date.now()}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function startOver() {
+            currentSlide = 1;
+            document.querySelectorAll('.slide').forEach((slide, index) => {
+                slide.classList.remove('active', 'prev');
+                if (index === 0) {
+                    slide.classList.add('active');
+                } else {
+                    slide.classList.add('slide');
+                }
+            });
+            
+            // Reset form
+            document.getElementById('landForm').reset();
+            landData = {};
+            soilData = {};
+            
+            if (map) {
+                map.remove();
+                map = null;
+            }
+        }
+
+        // Add some entrance animations
+        window.addEventListener('load', () => {
+            document.body.classList.add('loaded');
+        });
+    </script>
+</body>
+</html>
