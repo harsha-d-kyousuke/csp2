@@ -114,14 +114,12 @@
     </style>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-    <!-- Dark Mode Toggle -->
     <button id="darkModeToggle" class="fixed top-4 right-4 z-50 p-3 bg-white dark:bg-gray-800 rounded-full shadow-lg hover:shadow-xl transition-all duration-300">
         <i class="fas fa-moon dark:hidden text-gray-600"></i>
         <i class="fas fa-sun hidden dark:block text-yellow-400"></i>
     </button>
 
     <div class="relative w-full h-screen overflow-hidden">
-        <!-- Slide 1: Landing -->
         <div id="slide1" class="slide active absolute inset-0 flex items-center justify-center gradient-bg">
             <div class="text-center text-white px-6 animate-fade-in">
                 <div class="mb-8">
@@ -136,14 +134,12 @@
             </div>
         </div>
 
-        <!-- Slide 2: Input Form -->
         <div id="slide2" class="slide absolute inset-0 flex items-center justify-center bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 overflow-y-auto">
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 w-full max-w-2xl mx-4 animate-fade-in my-8">
                 <h2 class="text-3xl font-bold text-gray-800 dark:text-white mb-6 text-center">
                     <i class="fas fa-map-marker-alt text-green-500 mr-2"></i>Farm Details
                 </h2>
                 
-                <!-- Injected Instructions -->
                 <div class="bg-blue-50 dark:bg-gray-700 p-6 rounded-lg mb-6 border border-blue-200 dark:border-gray-600">
                     <h3 class="font-bold text-lg text-blue-800 dark:text-blue-300 mb-2">📍 Enter your farm's complete address details below</h3>
                     <ul class="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2">
@@ -157,7 +153,6 @@
                 </div>
 
                 <form id="landForm" class="space-y-6">
-                    <!-- Address Section -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                             <i class="fas fa-home mr-2"></i>Complete Address
@@ -236,7 +231,6 @@
             </div>
         </div>
 
-        <!-- Slide 3: Soil Analysis -->
         <div id="slide3" class="slide absolute inset-0 p-6 bg-gradient-to-br from-amber-50 via-orange-50 to-red-50 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 overflow-y-auto">
             <div class="max-w-6xl mx-auto">
                 <h2 class="text-4xl font-bold text-gray-800 dark:text-white mb-8 text-center animate-fade-in">
@@ -246,8 +240,7 @@
                 <div class="grid md:grid-cols-2 gap-8">
                     <div class="space-y-6">
                         <div id="soilCards" class="space-y-4">
-                            <!-- Soil cards will be populated here -->
-                        </div>
+                            </div>
                         
                         <button onclick="nextSlide()" class="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transform hover:scale-105 transition-all duration-300">
                             <i class="fas fa-brain mr-2"></i>Get AI Crop Recommendations
@@ -267,7 +260,6 @@
             </div>
         </div>
 
-        <!-- Slide 4: Smart Crop Suggestions -->
         <div id="slide4" class="slide absolute inset-0 p-6 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 overflow-y-auto">
             <div class="max-w-7xl mx-auto">
                 <h2 class="text-4xl font-bold text-gray-800 dark:text-white mb-4 text-center animate-fade-in">
@@ -286,8 +278,7 @@
                     </div>
                     
                     <div id="cropSuggestionsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        <!-- Crop suggestions will be populated here -->
-                    </div>
+                        </div>
                 </div>
                 
                 <div class="flex flex-col sm:flex-row gap-4 justify-center">
@@ -538,10 +529,17 @@
             document.documentElement.classList.toggle('dark');
         });
 
-        // Geolocation
+        // --- UPDATED GEOLOCATION SCRIPT ---
         function getLocation() {
             if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(showPosition, showError);
+                // Added options for higher accuracy
+                const options = {
+                    enableHighAccuracy: true, // Request high accuracy
+                    timeout: 10000,           // Wait up to 10 seconds
+                    maximumAge: 0             // Don't use a cached position
+                };
+                alert("Attempting to get your precise location. Please wait...");
+                navigator.geolocation.getCurrentPosition(showPosition, showError, options);
             } else {
                 alert("Geolocation is not supported by this browser.");
             }
@@ -554,30 +552,38 @@
             fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`)
                 .then(res => res.json())
                 .then(data => {
-                    document.getElementById('street').value = data.address.road || '';
-                    document.getElementById('town').value = data.address.village || data.address.town || '';
-                    document.getElementById('district').value = data.address.county || '';
-                    document.getElementById('state').value = data.address.state || '';
-                    document.getElementById('pincode').value = data.address.postcode || '';
-                    if (map) {
-                       map.setView([lat, lon], 13);
-                       L.marker([lat, lon]).addTo(map);
+                    if (data && data.address) {
+                        document.getElementById('street').value = data.address.road || '';
+                        document.getElementById('town').value = data.address.village || data.address.town || data.address.city || '';
+                        document.getElementById('district').value = data.address.county || data.address.state_district || '';
+                        document.getElementById('state').value = data.address.state || '';
+                        document.getElementById('pincode').value = data.address.postcode || '';
+                        if (map) {
+                           map.setView([lat, lon], 13);
+                           L.marker([lat, lon]).addTo(map);
+                        }
+                    } else {
+                        alert("Could not retrieve address details for this location.");
                     }
+                })
+                .catch(err => {
+                    console.error("Reverse geocoding failed:", err);
+                    alert("Failed to fetch address details.");
                 });
         }
         
         function showError(error) {
-            // Handle geolocation errors gracefully
-            let message = "An unknown error occurred.";
+            // Handle geolocation errors gracefully with clearer messages
+            let message = "An unknown error occurred while fetching location.";
             switch(error.code) {
                 case error.PERMISSION_DENIED:
-                    message = "User denied the request for Geolocation.";
+                    message = "You have denied the request for Geolocation. Please enable location permissions in your browser settings.";
                     break;
                 case error.POSITION_UNAVAILABLE:
-                    message = "Location information is unavailable.";
+                    message = "Location information is currently unavailable. Please check your connection or try again later.";
                     break;
                 case error.TIMEOUT:
-                    message = "The request to get user location timed out.";
+                    message = "The request to get your location timed out. Please try again with a stronger signal.";
                     break;
             }
              alert(message);
