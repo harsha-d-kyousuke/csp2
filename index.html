@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         .slide {
@@ -119,7 +120,7 @@
         <i class="fas fa-sun hidden dark:block text-yellow-400"></i>
     </button>
 
-    <div class="relative w-full h-screen overflow-hidden">
+    <div class="relative w-full h-screen overflow-auto">
         <div id="slide1" class="slide active absolute inset-0 flex items-center justify-center gradient-bg">
             <div class="text-center text-white px-6 animate-fade-in">
                 <div class="mb-8">
@@ -134,8 +135,8 @@
             </div>
         </div>
 
-        <div id="slide2" class="slide absolute inset-0 flex items-center justify-center bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 overflow-y-auto">
-            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 w-full max-w-2xl mx-4 animate-fade-in my-8">
+        <div id="slide2" class="slide absolute inset-0 overflow-y-auto min-h-screen p-4 bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 w-full max-w-2xl mx-auto animate-fade-in my-8">
                 <h2 class="text-3xl font-bold text-gray-800 dark:text-white mb-6 text-center">
                     <i class="fas fa-map-marker-alt text-green-500 mr-2"></i>Farm Details
                 </h2>
@@ -297,7 +298,7 @@
         // Comprehensive crop database with 999 crops
         const cropDatabase = [
             // Cereals
-            { name: 'Rice', category: 'cereals', icon: '�', ph: [5.5, 7.0], nitrogen: 'high', water: 'high', season: 'monsoon', profit: 8 },
+            { name: 'Rice', category: 'cereals', icon: '🍚', ph: [5.5, 7.0], nitrogen: 'high', water: 'high', season: 'monsoon', profit: 8 },
             { name: 'Wheat', category: 'cereals', icon: '🌾', ph: [6.0, 7.5], nitrogen: 'medium', water: 'medium', season: 'winter', profit: 7 },
             { name: 'Corn/Maize', category: 'cereals', icon: '🌽', ph: [6.0, 7.0], nitrogen: 'high', water: 'medium', season: 'summer', profit: 7 },
             { name: 'Barley', category: 'cereals', icon: '🌾', ph: [6.0, 7.5], nitrogen: 'medium', water: 'low', season: 'winter', profit: 6 },
@@ -335,7 +336,7 @@
             { name: 'Garlic', category: 'vegetables', icon: '🧄', ph: [6.0, 7.0], nitrogen: 'medium', water: 'low', season: 'winter', profit: 9 },
             { name: 'Ginger', category: 'vegetables', icon: '🫚', ph: [5.5, 6.5], nitrogen: 'high', water: 'high', season: 'monsoon', profit: 9 },
             { name: 'Turmeric', category: 'vegetables', icon: '🟡', ph: [5.0, 7.5], nitrogen: 'high', water: 'high', season: 'monsoon', profit: 8 },
-            { name: 'Green Beans', category: 'vegetables', icon: '🫘', ph: [6.0, 7.0], nitrogen: 'medium', water: 'medium', season: 'winter', profit: 7 },
+            { name: 'Green Beans', category: 'vegetables', icon: '�', ph: [6.0, 7.0], nitrogen: 'medium', water: 'medium', season: 'winter', profit: 7 },
             { name: 'Peas', category: 'vegetables', icon: '🟢', ph: [6.0, 7.5], nitrogen: 'low', water: 'medium', season: 'winter', profit: 7 },
             { name: 'Asparagus', category: 'vegetables', icon: '🥬', ph: [6.5, 7.5], nitrogen: 'high', water: 'medium', season: 'winter', profit: 9 },
             { name: 'Artichoke', category: 'vegetables', icon: '🌿', ph: [6.5, 7.5], nitrogen: 'high', water: 'medium', season: 'winter', profit: 8 },
@@ -514,14 +515,76 @@
         }
         
         function startOver() {
-            showSlide(1);
+            // Reload the page for a clean reset
+            window.location.reload();
         }
 
+        // --- PDF EXPORT FUNCTION (FIXED) ---
         function exportReport() {
-            // This is a placeholder for a report generation feature
-            alert('Generating and exporting your detailed farm report...');
-        }
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // --- Document Header ---
+            doc.setFontSize(22);
+            doc.setFont("helvetica", "bold");
+            doc.text("Smart Farm Planner Pro - Report", 105, 20, null, null, "center");
 
+            // --- Farm Details ---
+            doc.setFontSize(16);
+            doc.setFont("helvetica", "bold");
+            doc.text("1. Farm Details", 20, 40);
+            
+            doc.setFontSize(12);
+            doc.setFont("helvetica", "normal");
+            const street = document.getElementById('street').value;
+            const town = document.getElementById('town').value;
+            const district = document.getElementById('district').value;
+            const state = document.getElementById('state').value;
+            const pincode = document.getElementById('pincode').value;
+            const fullAddress = `${street}, ${town}, ${district}, ${state} - ${pincode}`;
+            
+            doc.text(`Address: ${fullAddress}`, 20, 50);
+            doc.text(`Land Area: ${document.getElementById('landArea').value} ${document.getElementById('areaUnit').value}`, 20, 57);
+            doc.text(`Current Crop: ${document.getElementById('currentCrop').value}`, 20, 64);
+            doc.text(`Water Source: ${document.getElementById('waterSource').value}`, 20, 71);
+            doc.text(`Budget: ${document.getElementById('budget').options[document.getElementById('budget').selectedIndex].text}`, 20, 78);
+
+            // --- Soil Analysis ---
+            doc.setFontSize(16);
+            doc.setFont("helvetica", "bold");
+            doc.text("2. Soil Analysis Report", 20, 95);
+            
+            doc.setFontSize(12);
+            const soilCards = document.querySelectorAll('#soilCards .soil-card');
+            let yPos = 105;
+            soilCards.forEach(card => {
+                const name = card.querySelector('.font-semibold').textContent;
+                const value = card.querySelector('.font-bold').textContent;
+                doc.text(`${name}: ${value}`, 20, yPos);
+                yPos += 7;
+            });
+            
+            // --- Crop Recommendations ---
+            doc.setFontSize(16);
+            doc.setFont("helvetica", "bold");
+            yPos += 10;
+            doc.text("3. Top Crop Recommendations", 20, yPos);
+            
+            doc.setFontSize(12);
+            yPos += 10;
+            const cropCards = document.querySelectorAll('#cropSuggestionsGrid .crop-card');
+            cropCards.forEach((card, index) => {
+                if (index < 10) { // Limit to top 10 for the report
+                    const name = card.querySelector('h3').textContent;
+                    const match = card.querySelector('.crop-score').textContent;
+                    doc.text(`${index + 1}. ${name} (${match})`, 20, yPos);
+                    yPos += 7;
+                }
+            });
+
+            // --- Save the PDF ---
+            doc.save('Smart_Farm_Report.pdf');
+        }
 
         // Dark Mode
         const darkModeToggle = document.getElementById('darkModeToggle');
@@ -529,17 +592,27 @@
             document.documentElement.classList.toggle('dark');
         });
 
-        // --- UPDATED GEOLOCATION SCRIPT ---
+        // Geolocation
         function getLocation() {
             if (navigator.geolocation) {
-                // Added options for higher accuracy
-                const options = {
-                    enableHighAccuracy: true, // Request high accuracy
-                    timeout: 10000,           // Wait up to 10 seconds
-                    maximumAge: 0             // Don't use a cached position
-                };
-                alert("Attempting to get your precise location. Please wait...");
-                navigator.geolocation.getCurrentPosition(showPosition, showError, options);
+                const options = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
+                // Using a simple alert for user feedback.
+                // For a better UX, consider a non-blocking notification.
+                const notification = document.createElement('div');
+                notification.textContent = 'Fetching your location...';
+                notification.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 5px; z-index: 2000;';
+                document.body.appendChild(notification);
+                
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                         document.body.removeChild(notification);
+                         showPosition(position);
+                    },
+                    (error) => {
+                        document.body.removeChild(notification);
+                        showError(error);
+                    },
+                    options);
             } else {
                 alert("Geolocation is not supported by this browser.");
             }
@@ -548,20 +621,15 @@
         function showPosition(position) {
             const lat = position.coords.latitude;
             const lon = position.coords.longitude;
-            // Using a reverse geocoding service (e.g., Nominatim - check usage policy)
             fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`)
                 .then(res => res.json())
                 .then(data => {
                     if (data && data.address) {
-                        document.getElementById('street').value = data.address.road || '';
+                        document.getElementById('street').value = data.address.road || data.address.suburb || '';
                         document.getElementById('town').value = data.address.village || data.address.town || data.address.city || '';
                         document.getElementById('district').value = data.address.county || data.address.state_district || '';
                         document.getElementById('state').value = data.address.state || '';
                         document.getElementById('pincode').value = data.address.postcode || '';
-                        if (map) {
-                           map.setView([lat, lon], 13);
-                           L.marker([lat, lon]).addTo(map);
-                        }
                     } else {
                         alert("Could not retrieve address details for this location.");
                     }
@@ -573,17 +641,16 @@
         }
         
         function showError(error) {
-            // Handle geolocation errors gracefully with clearer messages
-            let message = "An unknown error occurred while fetching location.";
+            let message = "An unknown error occurred.";
             switch(error.code) {
                 case error.PERMISSION_DENIED:
-                    message = "You have denied the request for Geolocation. Please enable location permissions in your browser settings.";
+                    message = "Geolocation permission denied. Please enable it in your browser settings.";
                     break;
                 case error.POSITION_UNAVAILABLE:
-                    message = "Location information is currently unavailable. Please check your connection or try again later.";
+                    message = "Location information is unavailable.";
                     break;
                 case error.TIMEOUT:
-                    message = "The request to get your location timed out. Please try again with a stronger signal.";
+                    message = "The request to get user location timed out.";
                     break;
             }
              alert(message);
@@ -597,19 +664,52 @@
             setTimeout(() => {
                 generateSoilReport();
                 generateCropSuggestions();
-                initializeMap();
+                initializeMap(); // This will now handle geocoding
                 nextSlide();
             }, 1000);
         });
         
+        // --- MAP INITIALIZATION (FIXED) ---
         function initializeMap() {
-            if (map) map.remove(); // Remove previous map instance
-            map = L.map('map').setView([20.5937, 78.9629], 5); // Default to India
+            if (map) map.remove(); 
+            
+            map = L.map('map');
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(map);
+
             const locationInfo = document.getElementById('locationInfo');
-            locationInfo.innerHTML = `<p class="font-semibold">${document.getElementById('town').value}, ${document.getElementById('state').value}</p>`;
+            const street = document.getElementById('street').value;
+            const town = document.getElementById('town').value;
+            const district = document.getElementById('district').value;
+            const state = document.getElementById('state').value;
+            const pincode = document.getElementById('pincode').value;
+            
+            const fullAddress = [street, town, district, state, pincode].filter(Boolean).join(', ');
+            locationInfo.innerHTML = `<p class="font-semibold text-gray-800 dark:text-white">${fullAddress || 'Address not provided'}</p>`;
+            
+            // Geocode the address to get coordinates
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.length > 0) {
+                        const lat = data[0].lat;
+                        const lon = data[0].lon;
+                        map.setView([lat, lon], 13);
+                        L.marker([lat, lon]).addTo(map)
+                            .bindPopup(fullAddress)
+                            .openPopup();
+                    } else {
+                        // Fallback to a default location (e.g., India) if geocoding fails
+                        map.setView([20.5937, 78.9629], 5);
+                         locationInfo.innerHTML += `<p class="text-sm text-red-500">Could not find the exact location. Showing default map.</p>`;
+                    }
+                })
+                .catch(err => {
+                    console.error("Geocoding failed:", err);
+                    map.setView([20.5937, 78.9629], 5);
+                    locationInfo.innerHTML += `<p class="text-sm text-red-500">Error finding location. Showing default map.</p>`;
+                });
         }
 
         function generateSoilReport() {
@@ -639,12 +739,11 @@
         function generateCropSuggestions(filter = 'all') {
              const suggestionsGrid = document.getElementById('cropSuggestionsGrid');
              suggestionsGrid.innerHTML = '';
-             let filteredCrops = cropDatabase;
-             if(filter !== 'all') {
-                filteredCrops = cropDatabase.filter(c => c.category === filter);
-             }
-             // Get top 20 recommendations
-             const recommendedCrops = filteredCrops.sort(() => 0.5 - Math.random()).slice(0, 20);
+        
+             // Sort the entire database by profit in descending order and get the top 3
+             const recommendedCrops = cropDatabase
+                .sort((a, b) => b.profit - a.profit)
+                .slice(0, 3);
 
              recommendedCrops.forEach((crop, index) => {
                 const bestClass = index === 0 ? 'best-crop' : '';
@@ -674,9 +773,13 @@
                 btn.classList.remove('bg-blue-500', 'text-white');
                 btn.classList.add('bg-gray-200', 'text-gray-700');
             });
-            document.querySelector(`.filter-btn[data-filter="${category}"]`).classList.add('bg-blue-500', 'text-white');
-            document.querySelector(`.filter-btn[data-filter="${category}"]`).classList.remove('bg-gray-200', 'text-gray-700');
+            const activeBtn = document.querySelector(`.filter-btn[data-filter="${category}"]`);
+            if (activeBtn) {
+                 activeBtn.classList.add('bg-blue-500', 'text-white');
+                 activeBtn.classList.remove('bg-gray-200', 'text-gray-700');
+            }
 
+            // This function call now ignores the category and always shows the top 3.
             generateCropSuggestions(category);
         }
 
@@ -709,6 +812,14 @@
                 suggestionsBox.classList.add('hidden');
             }
         });
+        
+        // Hide suggestions box when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!cropInput.contains(event.target) && !suggestionsBox.contains(event.target)) {
+                suggestionsBox.classList.add('hidden');
+            }
+        });
+
 
     </script>
 </body>
