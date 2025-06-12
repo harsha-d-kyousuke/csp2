@@ -739,11 +739,20 @@
         function generateCropSuggestions(filter = 'all') {
              const suggestionsGrid = document.getElementById('cropSuggestionsGrid');
              suggestionsGrid.innerHTML = '';
-        
-             // Sort the entire database by profit in descending order and get the top 3
-             const recommendedCrops = cropDatabase
-                .sort((a, b) => b.profit - a.profit)
-                .slice(0, 3);
+             let recommendedCrops;
+
+             if (filter === 'all') {
+                // If 'All Crops' is selected, get the top 3 most profitable crops overall.
+                recommendedCrops = cropDatabase
+                    .sort((a, b) => b.profit - a.profit)
+                    .slice(0, 3);
+             } else {
+                // If a specific category is selected, get the top 2 from that category.
+                recommendedCrops = cropDatabase
+                    .filter(c => c.category === filter)
+                    .sort((a, b) => b.profit - a.profit)
+                    .slice(0, 2);
+             }
 
              recommendedCrops.forEach((crop, index) => {
                 const bestClass = index === 0 ? 'best-crop' : '';
@@ -779,7 +788,6 @@
                  activeBtn.classList.remove('bg-gray-200', 'text-gray-700');
             }
 
-            // This function call now ignores the category and always shows the top 3.
             generateCropSuggestions(category);
         }
 
